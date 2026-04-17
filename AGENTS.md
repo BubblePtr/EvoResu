@@ -1,5 +1,44 @@
 # 项目上下文 — TanStack Start Full-Stack App
 
+## gstack
+
+可用 skills：
+- `/office-hours` — 创意头脑风暴 / YC Office Hours 模式
+- `/plan-ceo-review` — 战略视角 plan review
+- `/plan-eng-review` — 架构视角 plan review
+- `/plan-design-review` — 设计视角 plan review
+- `/design-consultation` — 创建设计系统 / DESIGN.md
+- `/design-shotgun` — 快速生成多种设计方案
+- `/design-html` — 生成独立 HTML 设计原型
+- `/review` — PR 合并前代码 review
+- `/ship` — 完整发布流程（测试 → changelog → PR）
+- `/land-and-deploy` — 落地并部署功能
+- `/canary` — 金丝雀发布
+- `/benchmark` — 性能基准测试
+- `/browse` — 无头浏览器（截图、交互、验证）
+- `/connect-chrome` — 连接 Chrome 浏览器
+- `/qa` — 系统性 QA 测试并修复 bug
+- `/qa-only` — 只输出 QA 报告，不修改代码
+- `/design-review` — 视觉设计审查并修复
+- `/setup-browser-cookies` — 导入浏览器 cookies
+- `/setup-deploy` — 部署环境初始化
+- `/retro` — 每周工程回顾
+- `/investigate` — 系统性 debug（四阶段）
+- `/document-release` — 发布后更新文档
+- `/codex` — 使用 OpenAI Codex 进行对抗性代码 review
+- `/cso` — 首席安全官视角安全 review
+- `/autoplan` — 自动规划复杂任务
+- `/plan-devex-review` — 开发者体验 review
+- `/devex-review` — 开发者体验审查
+- `/careful` — 危险命令安全守卫
+- `/freeze` — 限制编辑范围到指定目录
+- `/guard` — 最高安全模式（careful + freeze）
+- `/unfreeze` — 解除编辑限制
+- `/gstack-upgrade` — 升级 gstack 到最新版本
+- `/learn` — 学习新技能
+
+说明：所有网页浏览任务请优先使用 `/browse` skill，不要使用 `mcp__claude-in-chrome__*` 相关工具。
+
 <!-- intent-skills:start -->
 # Skill mappings - when working in these areas, load the linked skill file into context.
 skills:
@@ -122,3 +161,23 @@ bun run db:studio    # Drizzle Studio
 3. 运行 `bun run dev` 启动开发服务器，访问 `/demo/*` 页面验证各集成。
 4. 配置 Cloudflare 账户并运行 `bun run deploy` 进行首次部署。
 5. 根据业务需求，将 `src/routes/demo/` 中的示例页面替换为实际业务页面。
+
+## Skill routing
+
+When the user's request matches an available skill, ALWAYS invoke it using the Skill
+tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
+The skill has specialized workflows that produce better results than ad-hoc answers.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors → invoke investigate
+- Ship, deploy, push, create PR → invoke ship
+- QA, test the site, find bugs → invoke qa
+- Code review, check my diff → invoke review
+- Update docs after shipping → invoke document-release
+- Weekly retro → invoke retro
+- Design system, brand → invoke design-consultation
+- Visual audit, design polish → invoke design-review
+- Architecture review → invoke plan-eng-review
+- Save progress, checkpoint, resume → invoke checkpoint
+- Code quality, health check → invoke health
