@@ -15,3 +15,5 @@ todos.json
 .claude
 .agents
 skills-lock.json
+.claude/skills/gstack/
+.claude/skills/gstack/
