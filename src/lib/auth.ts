@@ -11,4 +11,7 @@ export const auth = betterAuth({
 		enabled: true,
 	},
 	plugins: [tanstackStartCookies()],
+	trustedOrigins: process.env.BETTER_AUTH_URL
+		? [process.env.BETTER_AUTH_URL]
+		: ["http://localhost:3000"],
 })
