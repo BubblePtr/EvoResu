@@ -1,8 +1,11 @@
-import { drizzle } from "drizzle-orm/node-postgres"
+import { Pool } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-serverless"
 
 import * as authSchema from "./auth-schema.ts"
 import * as schema from "./schema.ts"
 
-export const db = drizzle(process.env.DATABASE_URL!, {
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+
+export const db = drizzle(pool, {
 	schema: { ...schema, ...authSchema },
 })
