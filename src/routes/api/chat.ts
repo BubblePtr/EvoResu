@@ -1,8 +1,7 @@
-import { chat, toServerSentEventsResponse } from "@tanstack/ai"
-import { openaiText } from "@tanstack/ai-openai"
 import { createFileRoute } from "@tanstack/react-router"
 import type { InterviewModeInput, QuestionModeInput } from "../../lib/ai-modes"
 import { buildInterviewPrompt, buildQuestionPrompt, ModeSchema } from "../../lib/ai-modes"
+import { streamCompletion } from "../../lib/ai-provider"
 
 // Handles streaming chat modes: question and interview.
 // Non-streaming modes (resume_generation, evidence_panel, regeneration) use dedicated endpoints.
@@ -21,14 +20,11 @@ export const Route = createFileRoute("/api/chat")({
 				}
 				const mode = modeResult.data
 
-				const apiKey = process.env.OPENAI_API_KEY
-				if (!apiKey) {
-					return mockStream("这是演示回复。请在 .env.local 中设置 OPENAI_API_KEY。")
-				}
-
 				const abortController = new AbortController()
 
 				let systemPrompt: string
+				const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
+
 				if (mode === "question") {
 					const input = body as unknown as QuestionModeInput
 					const result = buildQuestionPrompt(input)
@@ -42,46 +38,8 @@ export const Route = createFileRoute("/api/chat")({
 					})
 				}
 
-				const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
-
-				const aiStream = chat({
-					adapter: openaiText("gpt-4o-mini"),
-					// biome-ignore lint/suspicious/noExplicitAny: server-side JSON messages don't carry adapter-specific metadata
-					messages: messages as any,
-					systemPrompts: [systemPrompt],
-					abortController,
-				})
-
-				return toServerSentEventsResponse(aiStream, { abortController })
+				return streamCompletion(systemPrompt, messages, abortController)
 			},
 		},
 	},
 })
-
-function mockStream(text: string): Response {
-	const encoder = new TextEncoder()
-	const stream = new ReadableStream({
-		start(controller) {
-			let i = 0
-			const interval = setInterval(() => {
-				if (i >= text.length) {
-					controller.close()
-					clearInterval(interval)
-					return
-				}
-				const chunk = text.slice(i, i + 2)
-				controller.enqueue(
-					encoder.encode(`data: ${JSON.stringify({ type: "text", content: chunk })}\n\n`),
-				)
-				i += 2
-			}, 40)
-		},
-	})
-	return new Response(stream, {
-		headers: {
-			"Content-Type": "text/event-stream",
-			"Cache-Control": "no-cache",
-			Connection: "keep-alive",
-		},
-	})
-}
