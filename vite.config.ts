@@ -8,6 +8,12 @@ import neon from "./neon-vite-plugin.ts"
 
 const config = defineConfig({
 	resolve: { tsconfigPaths: true },
+	build: {
+		rollupOptions: {
+			// diff-match-patch uses document/window and must never enter the Workers bundle
+			external: ["diff-match-patch"],
+		},
+	},
 	plugins: [
 		devtools(),
 		neon,

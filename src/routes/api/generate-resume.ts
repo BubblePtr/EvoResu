@@ -1,46 +1,36 @@
 import { chat, toServerSentEventsResponse } from "@tanstack/ai"
 import { openaiText } from "@tanstack/ai-openai"
 import { createFileRoute } from "@tanstack/react-router"
-import type { InterviewModeInput, QuestionModeInput } from "../../lib/ai-modes"
-import { buildInterviewPrompt, buildQuestionPrompt, ModeSchema } from "../../lib/ai-modes"
+import type { RegenerationModeInput, ResumeModeInput } from "../../lib/ai-modes"
+import { buildRegenerationPrompt, buildResumeGenerationPrompt } from "../../lib/ai-modes"
 
-// Handles streaming chat modes: question and interview.
-// Non-streaming modes (resume_generation, evidence_panel, regeneration) use dedicated endpoints.
-export const Route = createFileRoute("/api/chat")({
+// Streaming endpoint for resume_generation and regeneration modes.
+// Kept separate from /api/chat so each Workers request stays within the 30s wall-clock limit.
+export const Route = createFileRoute("/api/generate-resume")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {
 				const body = (await request.json()) as Record<string, unknown>
+				const mode = body.mode as "resume_generation" | "regeneration"
 
-				const modeResult = ModeSchema.safeParse(body.mode ?? "question")
-				if (!modeResult.success) {
+				if (mode !== "resume_generation" && mode !== "regeneration") {
 					return new Response(JSON.stringify({ error: "Invalid mode" }), {
 						status: 400,
 						headers: { "Content-Type": "application/json" },
 					})
 				}
-				const mode = modeResult.data
 
 				const apiKey = process.env.OPENAI_API_KEY
 				if (!apiKey) {
-					return mockStream("这是演示回复。请在 .env.local 中设置 OPENAI_API_KEY。")
+					return mockStream("（演示模式）这是生成的简历草稿。请配置 OPENAI_API_KEY。")
 				}
 
 				const abortController = new AbortController()
 
-				let systemPrompt: string
-				if (mode === "question") {
-					const input = body as unknown as QuestionModeInput
-					const result = buildQuestionPrompt(input)
-					systemPrompt = result.systemPrompt
-				} else if (mode === "interview") {
-					systemPrompt = buildInterviewPrompt(body as unknown as InterviewModeInput)
-				} else {
-					return new Response(JSON.stringify({ error: "Use dedicated endpoint for this mode" }), {
-						status: 400,
-						headers: { "Content-Type": "application/json" },
-					})
-				}
+				const systemPrompt =
+					mode === "resume_generation"
+						? buildResumeGenerationPrompt(body as unknown as ResumeModeInput)
+						: buildRegenerationPrompt(body as unknown as RegenerationModeInput)
 
 				const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
 

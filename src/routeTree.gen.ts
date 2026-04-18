@@ -17,6 +17,8 @@ import { Route as DemoTanstackAiRouteImport } from './routes/demo/tanstack-ai'
 import { Route as DemoNeonRouteImport } from './routes/demo/neon'
 import { Route as DemoDrizzleRouteImport } from './routes/demo/drizzle'
 import { Route as DemoBetterAuthRouteImport } from './routes/demo/better-auth'
+import { Route as ApiGenerateResumeRouteImport } from './routes/api/generate-resume'
+import { Route as ApiEvidencePanelRouteImport } from './routes/api/evidence-panel'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as DemoSentryTestingRouteImport } from './routes/demo/sentry.testing'
 import { Route as DemoFormSimpleRouteImport } from './routes/demo/form.simple'
@@ -63,6 +65,16 @@ const DemoBetterAuthRoute = DemoBetterAuthRouteImport.update({
   path: '/demo/better-auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGenerateResumeRoute = ApiGenerateResumeRouteImport.update({
+  id: '/api/generate-resume',
+  path: '/api/generate-resume',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEvidencePanelRoute = ApiEvidencePanelRouteImport.update({
+  id: '/api/evidence-panel',
+  path: '/api/evidence-panel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -93,6 +105,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/evidence-panel': typeof ApiEvidencePanelRoute
+  '/api/generate-resume': typeof ApiGenerateResumeRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/demo/drizzle': typeof DemoDrizzleRoute
   '/demo/neon': typeof DemoNeonRoute
@@ -108,6 +122,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/evidence-panel': typeof ApiEvidencePanelRoute
+  '/api/generate-resume': typeof ApiGenerateResumeRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/demo/drizzle': typeof DemoDrizzleRoute
   '/demo/neon': typeof DemoNeonRoute
@@ -124,6 +140,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/evidence-panel': typeof ApiEvidencePanelRoute
+  '/api/generate-resume': typeof ApiGenerateResumeRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/demo/drizzle': typeof DemoDrizzleRoute
   '/demo/neon': typeof DemoNeonRoute
@@ -141,6 +159,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/api/chat'
+    | '/api/evidence-panel'
+    | '/api/generate-resume'
     | '/demo/better-auth'
     | '/demo/drizzle'
     | '/demo/neon'
@@ -156,6 +176,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/api/chat'
+    | '/api/evidence-panel'
+    | '/api/generate-resume'
     | '/demo/better-auth'
     | '/demo/drizzle'
     | '/demo/neon'
@@ -171,6 +193,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/api/chat'
+    | '/api/evidence-panel'
+    | '/api/generate-resume'
     | '/demo/better-auth'
     | '/demo/drizzle'
     | '/demo/neon'
@@ -187,6 +211,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiEvidencePanelRoute: typeof ApiEvidencePanelRoute
+  ApiGenerateResumeRoute: typeof ApiGenerateResumeRoute
   DemoBetterAuthRoute: typeof DemoBetterAuthRoute
   DemoDrizzleRoute: typeof DemoDrizzleRoute
   DemoNeonRoute: typeof DemoNeonRoute
@@ -257,6 +283,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoBetterAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-resume': {
+      id: '/api/generate-resume'
+      path: '/api/generate-resume'
+      fullPath: '/api/generate-resume'
+      preLoaderRoute: typeof ApiGenerateResumeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/evidence-panel': {
+      id: '/api/evidence-panel'
+      path: '/api/evidence-panel'
+      fullPath: '/api/evidence-panel'
+      preLoaderRoute: typeof ApiEvidencePanelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -299,6 +339,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiEvidencePanelRoute: ApiEvidencePanelRoute,
+  ApiGenerateResumeRoute: ApiGenerateResumeRoute,
   DemoBetterAuthRoute: DemoBetterAuthRoute,
   DemoDrizzleRoute: DemoDrizzleRoute,
   DemoNeonRoute: DemoNeonRoute,
