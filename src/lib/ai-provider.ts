@@ -9,7 +9,7 @@ interface ChatMessage {
 	content: string
 }
 
-const KIMI_BASE_URL = "https://api.moonshot.cn/v1"
+const KIMI_BASE_URL = "https://api.kimi.com/coding"
 const KIMI_MODEL = "moonshot-v1-8k"
 
 function getProvider(): "openai" | "kimi" | "mock" {
