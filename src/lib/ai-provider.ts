@@ -9,8 +9,11 @@ interface ChatMessage {
 	content: string
 }
 
-const KIMI_BASE_URL = "https://api.kimi.com/coding"
-const KIMI_MODEL = "moonshot-v1-8k"
+// Kimi config via env vars. Defaults work with standard Moonshot platform.
+// For kimi.com/coding endpoint, set KIMI_BASE_URL=https://api.kimi.com/coding/v1
+// and KIMI_MODEL=kimi-for-coding (requires Coding Agent scoped key).
+const KIMI_BASE_URL = process.env.KIMI_BASE_URL ?? "https://api.moonshot.cn/v1"
+const KIMI_MODEL = process.env.KIMI_MODEL ?? "moonshot-v1-8k"
 
 function getProvider(): "openai" | "kimi" | "mock" {
 	if (process.env.MOONSHOT_API_KEY) return "kimi"
