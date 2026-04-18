@@ -24,7 +24,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "TanStack Start Starter",
+				title: "EvoResu — AI 简历自我发现引擎",
 			},
 		],
 		links: [
