@@ -1,5 +1,7 @@
-// Unified AI provider supporting OpenAI (via @tanstack/ai) and Kimi (via direct fetch).
+// Unified AI provider supporting OpenAI, DeepSeek, and Kimi.
 // Falls back to mock stream when no API key is configured.
+//
+// Priority: DEEPSEEK_API_KEY > MOONSHOT_API_KEY > OPENAI_API_KEY > mock
 
 import { chat, toServerSentEventsResponse } from "@tanstack/ai"
 import { openaiText } from "@tanstack/ai-openai"
@@ -9,16 +11,21 @@ interface ChatMessage {
 	content: string
 }
 
-// Kimi config via env vars. Defaults work with standard Moonshot platform.
-// For kimi.com/coding endpoint, set KIMI_BASE_URL=https://api.kimi.com/coding/v1
-// and KIMI_MODEL=kimi-for-coding (requires Coding Agent scoped key).
-const KIMI_BASE_URL = process.env.KIMI_BASE_URL ?? "https://api.moonshot.cn/v1"
-const KIMI_MODEL = process.env.KIMI_MODEL ?? "moonshot-v1-8k"
+// ─── Provider detection ─────────────────────────────────────────────────────
 
-function getProvider(): "openai" | "kimi" | "mock" {
-	if (process.env.MOONSHOT_API_KEY) return "kimi"
-	if (process.env.OPENAI_API_KEY) return "openai"
-	return "mock"
+const PROVIDER = (() => {
+	if (process.env.DEEPSEEK_API_KEY) return "deepseek" as const
+	if (process.env.MOONSHOT_API_KEY) return "kimi" as const
+	if (process.env.OPENAI_API_KEY) return "openai" as const
+	return "mock" as const
+})()
+
+// ─── OpenAI-compatible fetch helpers (shared by DeepSeek + Kimi) ────────────
+
+interface OpenAICompatibleConfig {
+	baseUrl: string
+	apiKey: string
+	model: string
 }
 
 function buildMessages(
@@ -31,24 +38,22 @@ function buildMessages(
 	]
 }
 
-// ─── Kimi streaming via raw fetch ───────────────────────────────────────────
-
-async function kimiStream(
+async function compatStream(
+	config: OpenAICompatibleConfig,
 	systemPrompt: string,
 	messages: ChatMessage[],
 	abortController: AbortController,
 ): Promise<Response> {
-	const apiKey = process.env.MOONSHOT_API_KEY!
 	const body = {
-		model: KIMI_MODEL,
+		model: config.model,
 		messages: buildMessages(systemPrompt, messages),
 		stream: true,
 	}
 
-	const fetchRes = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+	const fetchRes = await fetch(`${config.baseUrl}/chat/completions`, {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${apiKey}`,
+			Authorization: `Bearer ${config.apiKey}`,
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(body),
@@ -56,14 +61,14 @@ async function kimiStream(
 	})
 
 	if (!fetchRes.ok) {
-		const err = await fetchRes.text().catch(() => "Kimi request failed")
+		const err = await fetchRes.text().catch(() => "AI request failed")
 		return new Response(JSON.stringify({ error: err }), {
 			status: fetchRes.status,
 			headers: { "Content-Type": "application/json" },
 		})
 	}
 
-	// Transform Kimi SSE chunks into the format readSSEStream expects
+	// Transform OpenAI-compatible SSE into the format readSSEStream expects
 	const encoder = new TextEncoder()
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -97,7 +102,10 @@ async function kimiStream(
 							const delta = parsed.choices?.[0]?.delta?.content
 							if (typeof delta === "string" && delta) {
 								controller.enqueue(
-									encoder.encode(`data: ${JSON.stringify({ type: "text", content: delta })}\n\n`),
+									encoder.encode(
+										`data: ${JSON.stringify({ type: "text", content: delta })}
+\n`,
+									),
 								)
 							}
 						} catch {
@@ -125,27 +133,28 @@ async function kimiStream(
 	})
 }
 
-// ─── Kimi non-streaming via raw fetch ───────────────────────────────────────
-
-async function kimiChat(systemPrompt: string, messages: ChatMessage[]): Promise<string> {
-	const apiKey = process.env.MOONSHOT_API_KEY!
+async function compatChat(
+	config: OpenAICompatibleConfig,
+	systemPrompt: string,
+	messages: ChatMessage[],
+): Promise<string> {
 	const body = {
-		model: KIMI_MODEL,
+		model: config.model,
 		messages: buildMessages(systemPrompt, messages),
 		stream: false,
 	}
 
-	const res = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+	const res = await fetch(`${config.baseUrl}/chat/completions`, {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${apiKey}`,
+			Authorization: `Bearer ${config.apiKey}`,
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(body),
 	})
 
 	if (!res.ok) {
-		const err = await res.text().catch(() => "Kimi request failed")
+		const err = await res.text().catch(() => "AI request failed")
 		throw new Error(err)
 	}
 
@@ -153,6 +162,46 @@ async function kimiChat(systemPrompt: string, messages: ChatMessage[]): Promise<
 		choices: Array<{ message: { content: string } }>
 	}
 	return json.choices[0]?.message?.content ?? ""
+}
+
+// ─── DeepSeek ───────────────────────────────────────────────────────────────
+
+const DEEPSEEK_CONFIG: OpenAICompatibleConfig = {
+	baseUrl: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
+	apiKey: process.env.DEEPSEEK_API_KEY ?? "",
+	model: process.env.DEEPSEEK_MODEL ?? "deepseek-chat",
+}
+
+function deepseekStream(
+	systemPrompt: string,
+	messages: ChatMessage[],
+	abortController: AbortController,
+) {
+	return compatStream(DEEPSEEK_CONFIG, systemPrompt, messages, abortController)
+}
+
+function deepseekChat(systemPrompt: string, messages: ChatMessage[]) {
+	return compatChat(DEEPSEEK_CONFIG, systemPrompt, messages)
+}
+
+// ─── Kimi ───────────────────────────────────────────────────────────────────
+
+const KIMI_CONFIG: OpenAICompatibleConfig = {
+	baseUrl: process.env.KIMI_BASE_URL ?? "https://api.moonshot.cn/v1",
+	apiKey: process.env.MOONSHOT_API_KEY ?? "",
+	model: process.env.KIMI_MODEL ?? "moonshot-v1-8k",
+}
+
+function kimiStream(
+	systemPrompt: string,
+	messages: ChatMessage[],
+	abortController: AbortController,
+) {
+	return compatStream(KIMI_CONFIG, systemPrompt, messages, abortController)
+}
+
+function kimiChat(systemPrompt: string, messages: ChatMessage[]) {
+	return compatChat(KIMI_CONFIG, systemPrompt, messages)
 }
 
 // ─── OpenAI via @tanstack/ai ────────────────────────────────────────────────
@@ -198,7 +247,10 @@ function mockStream(text: string, abortController: AbortController): Response {
 				}
 				const chunk = text.slice(i, i + 2)
 				controller.enqueue(
-					encoder.encode(`data: ${JSON.stringify({ type: "text", content: chunk })}\n\n`),
+					encoder.encode(
+						`data: ${JSON.stringify({ type: "text", content: chunk })}
+\n`,
+					),
 				)
 				i += 2
 			}, 40)
@@ -220,15 +272,16 @@ export async function streamCompletion(
 	messages: ChatMessage[],
 	abortController: AbortController,
 ): Promise<Response> {
-	const provider = getProvider()
-	switch (provider) {
+	switch (PROVIDER) {
+		case "deepseek":
+			return deepseekStream(systemPrompt, messages, abortController)
 		case "kimi":
 			return kimiStream(systemPrompt, messages, abortController)
 		case "openai":
 			return openaiStream(systemPrompt, messages, abortController)
 		default:
 			return mockStream(
-				"这是演示回复。请在 .env.local 中设置 MOONSHOT_API_KEY 或 OPENAI_API_KEY。",
+				"这是演示回复。请在 .env.local 中设置 DEEPSEEK_API_KEY、MOONSHOT_API_KEY 或 OPENAI_API_KEY。",
 				abortController,
 			)
 	}
@@ -238,13 +291,14 @@ export async function chatCompletion(
 	systemPrompt: string,
 	messages: ChatMessage[],
 ): Promise<string> {
-	const provider = getProvider()
-	switch (provider) {
+	switch (PROVIDER) {
+		case "deepseek":
+			return deepseekChat(systemPrompt, messages)
 		case "kimi":
 			return kimiChat(systemPrompt, messages)
 		case "openai":
 			return openaiChat(systemPrompt, messages)
 		default:
-			return "（演示模式）请在 .env.local 中设置 MOONSHOT_API_KEY 或 OPENAI_API_KEY。"
+			return "（演示模式）请在 .env.local 中设置 DEEPSEEK_API_KEY、MOONSHOT_API_KEY 或 OPENAI_API_KEY。"
 	}
 }
